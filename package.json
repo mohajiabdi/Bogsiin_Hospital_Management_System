@@ -1,0 +1,20 @@
+{
+  "name": "hospital",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tailwindcss@3.4.17 -i ./hospital/assets/input.css -o ./hospital/assets/style.css --watch",
+    "build": "tailwindcss@3.4.17 -i ./hospital/assets/input.css -o ./hospital/assets/style.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.17"
+  }
+}
