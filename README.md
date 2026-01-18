@@ -137,7 +137,7 @@ hospital/
 
 Clone the repository:
 
-git clone https://github.com/your-username/hospital-management-system.git
+git clone https://github.com/mohajiabdi/Bogsiin_Hospital_Management_System.git
 
 
 Move the project to your XAMPP htdocs folder:
