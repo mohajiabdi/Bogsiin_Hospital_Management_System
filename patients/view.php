@@ -9,6 +9,20 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function flash_set($type, $msg){ $_SESSION["flash"] = ["type"=>$type, "msg"=>$msg]; }
 function flash_get(){ if (!isset($_SESSION["flash"])) return null; $f=$_SESSION["flash"]; unset($_SESSION["flash"]); return $f; }
+function valid_person_name($name) {
+  $name = trim(preg_replace('/\s+/', ' ', $name));
+  if ($name === "") return false;
+  if (strlen($name) < 3) return false;
+  // letters + spaces only (no numbers, no symbols)
+  return (bool)preg_match('/^[A-Za-z ]+$/', $name);
+}
+function valid_phone($phone) {
+  $phone = trim($phone);
+  if ($phone === "") return true; // optional field
+  // allows +, digits, spaces, hyphens (Somalia-safe)
+  return (bool)preg_match('/^\+?[0-9][0-9\s\-]{6,20}$/', $phone);
+}
+
 
 // ---------------- POST actions ----------------
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -27,10 +41,54 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $emergency_contact_name = trim($_POST["emergency_contact_name"] ?? "");
     $emergency_contact_phone = trim($_POST["emergency_contact_phone"] ?? "");
 
-    if ($full_name === "" || ($gender !== "Male" && $gender !== "Female")) {
-      flash_set("error", "Full name and gender are required.");
-      header("Location: /hospital/patients/view.php"); exit;
+// Validations
+
+// REQUIRED fields
+if ($full_name === "" || ($gender !== "Male" && $gender !== "Female")) {
+  flash_set("error", "Full name and gender are required.");
+  header("Location: /hospital/patients/view.php"); exit;
+}
+
+// Full name validation
+if (!valid_person_name($full_name)) {
+  flash_set("error", "Patient full name may contain only letters and spaces (min 3 characters).");
+  header("Location: /hospital/patients/view.php"); exit;
+}
+
+// Phone validation (optional)
+if (!valid_phone($phone)) {
+  flash_set("error", "Patient phone number format is invalid.");
+  header("Location: /hospital/patients/view.php"); exit;
+}
+
+// Emergency contact name (optional)
+if ($emergency_contact_name !== "" && !valid_person_name($emergency_contact_name)) {
+  flash_set("error", "Emergency contact name may contain only letters and spaces (min 3 characters).");
+  header("Location: /hospital/patients/view.php"); exit;
+}
+
+// Emergency contact phone (optional)
+if (!valid_phone($emergency_contact_phone)) {
+  flash_set("error", "Emergency contact phone number format is invalid.");
+  header("Location: /hospital/patients/view.php"); exit;
+}
+// Date of birth validation (must not be in the future)
+if ($date_of_birth !== "") {
+    $dobDt = DateTime::createFromFormat('Y-m-d', $date_of_birth);
+    $now = new DateTime(); // current date and time
+
+    if (!$dobDt) {
+        flash_set("error", "Invalid date of birth format.");
+        header("Location: /hospital/patients/view.php"); exit;
     }
+
+    // allow today and any past time
+    if ($dobDt > $now) {
+        flash_set("error", "Date of birth cannot be in the future.");
+        header("Location: /hospital/patients/view.php"); exit;
+    }
+}
+
 
     $dobDb = ($date_of_birth !== "") ? $date_of_birth : null;
 
@@ -555,4 +613,3 @@ include_once __DIR__ . "/../includes/header.php";
 })();
 </script>
 
-<?php include_once __DIR__ . "/../includes/footer.php"; ?>

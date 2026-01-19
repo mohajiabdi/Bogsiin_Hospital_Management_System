@@ -9,6 +9,15 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function flash_set($type, $msg){ $_SESSION["flash"] = ["type"=>$type, "msg"=>$msg]; }
 function flash_get(){ if (!isset($_SESSION["flash"])) return null; $f=$_SESSION["flash"]; unset($_SESSION["flash"]); return $f; }
+function valid_full_name($name) {
+  // normalize spaces
+  $name = trim(preg_replace('/\s+/', ' ', $name));
+
+  if (strlen($name) < 3) return false;
+
+  // letters + spaces only
+  return (bool)preg_match('/^[A-Za-z ]+$/', $name);
+}
 
 $me = $_SESSION["user"] ?? null;
 if (!$me) { header("Location: /hospital/auth/login.php"); exit; }
@@ -28,13 +37,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   // ====== CURRENT USER SETTINGS ======
   if ($action === "update_me_settings") {
-    $full_name = trim($_POST["full_name"] ?? "");
-    $email = trim($_POST["email"] ?? "");
+   $full_name = trim($_POST["full_name"] ?? "");
+$email = trim($_POST["email"] ?? "");
 
-    if ($full_name === "" || $email === "") {
-      flash_set("error", "Full name and email are required.");
-      header("Location: /hospital/users/view.php"); exit;
-    }
+if ($full_name === "" || $email === "") {
+  flash_set("error", "Full name and email are required.");
+  header("Location: /hospital/users/view.php"); exit;
+}
+
+if (!valid_full_name($full_name)) {
+  flash_set("error", "Full name may contain only letters and spaces (min 3 characters).");
+  header("Location: /hospital/users/view.php"); exit;
+}
+
 
     // Email unique (except me)
     $check = $pdo->prepare("SELECT id FROM users WHERE email=? AND id<>? LIMIT 1");
@@ -103,13 +118,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $password = $_POST["password"] ?? "";
       $password2 = $_POST["password2"] ?? "";
 
-      if ($full_name === "" || $email === "") {
-        flash_set("error", "Full name and email are required.");
-        header("Location: /hospital/users/view.php"); exit;
-      }
+     if ($full_name === "" || $email === "") {
+  flash_set("error", "Full name and email are required.");
+  header("Location: /hospital/users/view.php"); exit;
+}
+
+if (!valid_full_name($full_name)) {
+  flash_set("error", "Full name may contain only letters and spaces (min 3 characters).");
+  header("Location: /hospital/users/view.php"); exit;
+}
+
 
       $allowedRoles = ["ADMIN","RECEPTIONIST","STAFF"];
       if (!in_array($role, $allowedRoles, true)) $role = "STAFF";
+      // Prevent deactivating admins
+if ($role === "ADMIN" && $is_active === 0) {
+
+  // Cannot deactivate yourself
+  if ($id === "" || (int)$id === $myId) {
+    flash_set("error", "You cannot deactivate your own admin account.");
+    header("Location: /hospital/users/view.php"); exit;
+  }
+
+  // Cannot deactivate another admin
+  $chkAdmin = $pdo->prepare("SELECT id FROM users WHERE id=? AND role='ADMIN' LIMIT 1");
+  $chkAdmin->execute([(int)$id]);
+  if ($chkAdmin->fetch()) {
+    flash_set("error", "You cannot deactivate another admin account.");
+    header("Location: /hospital/users/view.php"); exit;
+  }
+}
+
 
       if ($id === "") {
         // create
@@ -198,20 +237,51 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 // ---------------- ADMIN list ----------------
-$uq = trim($_GET["uq"] ?? "");
+
 $adminUsers = [];
+$search = trim($_GET["q"] ?? "");
 
 if ($myRole === "ADMIN") {
-  $w = "";
-  $p = [];
-  if ($uq !== "") {
-    $w = "WHERE full_name LIKE :q OR email LIKE :q OR role LIKE :q";
-    $p[":q"] = "%$uq%";
+
+  $where = [];
+  $params = [];
+
+ if ($search !== "") {
+  // multi-word search like patients page
+  $terms = preg_split('/\s+/', $search);
+  $terms = array_values(array_filter($terms, fn($t) => $t !== ""));
+
+  $i = 0;
+  foreach ($terms as $t) {
+    $n = ":t{$i}_name";
+    $e = ":t{$i}_email";
+    $r = ":t{$i}_role";
+
+    $where[] = "(full_name LIKE $n OR email LIKE $e OR role LIKE $r)";
+
+    $params[$n] = "%$t%";
+    $params[$e] = "%$t%";
+    $params[$r] = "%$t%";
+
+    $i++;
   }
-  $stmt = $pdo->prepare("SELECT id, full_name, email, role, is_active, created_at FROM users $w ORDER BY created_at DESC LIMIT 300");
-  $stmt->execute($p);
+}
+
+
+  $sql = "SELECT id, full_name, email, role, is_active, created_at
+          FROM users";
+
+  if ($where) {
+    $sql .= " WHERE " . implode(" AND ", $where);
+  }
+
+  $sql .= " ORDER BY created_at DESC LIMIT 300";
+
+  $stmt = $pdo->prepare($sql);
+  $stmt->execute($params);
   $adminUsers = $stmt->fetchAll() ?: [];
 }
+
 
 $flash = flash_get();
 include_once __DIR__ . "/../includes/header.php";
@@ -331,7 +401,8 @@ include_once __DIR__ . "/../includes/header.php";
 
             <div class="flex gap-2">
               <form method="GET" class="flex gap-2">
-                <input name="uq" value="<?php echo h($uq); ?>"
+                <input name="q" value="<?php echo h($search); ?>"
+
                   class="w-64 rounded-2xl border bg-white px-4 py-2 text-sm outline-none"
                   placeholder="Search users..." />
                 <button class="rounded-2xl border bg-white px-4 py-2 text-sm font-extrabold hover:bg-slate-50" type="submit">
@@ -550,4 +621,4 @@ include_once __DIR__ . "/../includes/header.php";
   </div>
 </div>
 
-<?php include_once __DIR__ . "/../includes/footer.php"; ?>
+

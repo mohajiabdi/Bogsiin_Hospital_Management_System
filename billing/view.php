@@ -92,6 +92,100 @@ function ensure_prescription_bill(PDO $pdo, int $prescriptionId): ?int {
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $action = $_POST["action"] ?? "";
 
+    // ================= DELETE BILL (UNPAID ONLY) =================
+  if ($action === "delete_bill") {
+    $id = (int)($_POST["id"] ?? 0);
+
+    if ($id <= 0) { flash_set("error","Invalid bill ID."); header("Location:/hospital/billing/view.php"); exit; }
+
+    $stmt = $pdo->prepare("SELECT id, status FROM bills WHERE id=? LIMIT 1");
+    $stmt->execute([$id]);
+    $b = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$b) { flash_set("error","Bill not found."); header("Location:/hospital/billing/view.php"); exit; }
+
+    if (($b["status"] ?? "") !== "UNPAID") {
+      flash_set("error","Cannot delete paid bill.");
+      header("Location:/hospital/billing/view.php"); exit;
+    }
+
+    $del = $pdo->prepare("DELETE FROM bills WHERE id=?");
+    $del->execute([$id]);
+
+    flash_set("success","Bill deleted.");
+    header("Location:/hospital/billing/view.php"); exit;
+  }
+
+  // ================= UPDATE BILL (EDIT) - UNPAID ONLY =================
+  if ($action === "update_bill") {
+    $id = (int)($_POST["id"] ?? 0);
+    $description = trim($_POST["description"] ?? "");
+    $amount = money2($_POST["amount"] ?? 0);
+    $discount = money2($_POST["discount"] ?? 0);
+
+    if ($id <= 0) { flash_set("error","Invalid bill ID."); header("Location:/hospital/billing/view.php"); exit; }
+
+    $stmt = $pdo->prepare("SELECT id, bill_type, status, amount AS old_amount FROM bills WHERE id=? LIMIT 1");
+    $stmt->execute([$id]);
+    $b = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$b) { flash_set("error","Bill not found."); header("Location:/hospital/billing/view.php"); exit; }
+
+    if (($b["status"] ?? "") !== "UNPAID") {
+      flash_set("error","You can only edit UNPAID bills.");
+      header("Location:/hospital/billing/view.php"); exit;
+    }
+
+    $billType = $b["bill_type"] ?? "OTHER";
+
+    // Don’t allow editing prescription bills here
+    if ($billType === "PRESCRIPTION") {
+      flash_set("error","Prescription bills cannot be edited here.");
+      header("Location:/hospital/billing/view.php"); exit;
+    }
+
+    // enforce description
+    if ($description === "" && $billType !== "CONSULTATION" && $billType !== "SURGERY") {
+      flash_set("error","Description is required.");
+      header("Location:/hospital/billing/view.php"); exit;
+    }
+
+    // enforce fixed consultation
+    if ($billType === "CONSULTATION") {
+      $amount = 10.00;
+      if ($description === "") $description = "Consultation fee";
+    }
+
+    // keep surgery amount unchanged (cost from DB)
+    if ($billType === "SURGERY") {
+      $amount = money2($b["old_amount"] ?? 0);
+      if ($description === "") $description = "Surgery";
+    }
+
+    if ($amount < 0) $amount = 0;
+    if ($discount < 0) $discount = 0;
+
+    // Limit discount to 20%
+    $maxDiscount = money2($amount * 0.20);
+    if ($discount > $maxDiscount) $discount = $maxDiscount;
+
+    $total = money2($amount - $discount);
+
+    $u = $pdo->prepare("
+      UPDATE bills
+      SET description=?,
+          amount=?,
+          discount=?,
+          total=?
+      WHERE id=? AND status='UNPAID'
+    ");
+    $u->execute([$description, $amount, $discount, $total, $id]);
+
+    flash_set("success","Bill updated.");
+    header("Location:/hospital/billing/view.php"); exit;
+  }
+
+
   // Add OTHER/CONSULTATION/SURGERY manual bill (walk-in supported)
   if ($action === "add_bill") {
     $patient_id = (int)($_POST["patient_id"] ?? 0);
@@ -138,8 +232,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $employee_id = null;
     }
 
-    if ($discount > $amount) $discount = $amount;
-    $total = money2($amount - $discount);
+   // Limit discount to 20% of amount
+$maxDiscount = money2($amount * 0.20);
+if ($discount > $maxDiscount) $discount = $maxDiscount;
+
+$total = money2($amount - $discount);
 
     // IMPORTANT: if user tries to create PRESCRIPTION bill manually without prescription_id, block it
     if ($bill_type === "PRESCRIPTION") {
@@ -241,6 +338,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   header("Location:/hospital/billing/view.php"); exit;
 }
+
+
+
+
 
 // ---------------- If coming from prescription page ----------------
 $prescription_id = (int)($_GET["prescription_id"] ?? 0);
@@ -472,17 +573,19 @@ include_once __DIR__ . "/../includes/header.php";
       <section class="mt-6 rounded-3xl border bg-white shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-sm">
-            <thead class="bg-slate-50 text-xs font-extrabold tracking-widest text-slate-500">
-              <tr>
-                <th class="px-5 py-4">BILL</th>
-                <th class="px-5 py-4">PATIENT</th>
-                <th class="px-5 py-4">TYPE</th>
-                <th class="px-5 py-4">TOTAL</th>
-                <th class="px-5 py-4">STATUS</th>
-                <th class="px-5 py-4">RECEIPT</th>
-                <th class="px-5 py-4 text-right">ACTIONS</th>
-              </tr>
-            </thead>
+           <thead class="bg-slate-50 text-xs font-extrabold tracking-widest text-slate-500">
+  <tr>
+    <th class="px-5 py-4">BILL</th>
+    <th class="px-5 py-4">PATIENT</th>
+    <th class="px-5 py-4">TYPE</th>
+    <th class="px-5 py-4">TOTAL</th>
+    <th class="px-5 py-4">STATUS</th>
+    <th class="px-5 py-4">RECEIPT</th>
+    <th class="px-5 py-4 text-right">PAY / UPDATE</th>
+    <th class="px-5 py-4 text-right">ACTIONS</th> <!-- New column -->
+  </tr>
+</thead>
+
             <tbody class="divide-y">
               <?php if (!$rows): ?>
                 <tr><td colspan="7" class="px-5 py-10 text-center text-slate-500 font-semibold">No bills found.</td></tr>
@@ -531,16 +634,17 @@ include_once __DIR__ . "/../includes/header.php";
                       <?php endif; ?>
                     </td>
 
-                    <td class="px-5 py-4">
-                      <?php if ($isPaid && $receipt): ?>
-                        <a class="font-extrabold text-orange-600 hover:text-orange-700"
-                           href="/hospital/billing/receipt.php?id=<?php echo (int)$r["id"]; ?>" target="_blank">
-                          <?php echo h($receipt); ?> (Print)
-                        </a>
-                      <?php else: ?>
-                        <span class="text-sm font-semibold text-slate-400">—</span>
-                      <?php endif; ?>
-                    </td>
+                   <td class="px-5 py-4">
+  <?php if ($isPaid && $receipt): ?>
+    <a href="/hospital/billing/receipt.php?id=<?php echo (int)$r["id"]; ?>" target="_blank"
+       class="grid h-10 place-items-center rounded-2xl bg-sky-600 px-3 text-xs font-extrabold text-white hover:bg-sky-700">
+      RECEIPT
+    </a>
+  <?php else: ?>
+    <span class="text-sm font-semibold text-slate-400">—</span>
+  <?php endif; ?>
+</td>
+
 
                     <td class="px-5 py-4">
                       <div class="flex justify-end gap-2">
@@ -558,6 +662,36 @@ include_once __DIR__ . "/../includes/header.php";
                         <?php endif; ?>
                       </div>
                     </td>
+                    <td class="px-5 py-4 text-right">
+  <?php if (!$isPaid): ?>
+    <div class="flex justify-end gap-2">
+      <!-- Edit button -->
+      <button type="button"
+  class="grid h-10 w-10 place-items-center rounded-2xl border bg-white hover:bg-slate-50"
+  data-id="<?php echo (int)$r['id']; ?>"
+  data-type="<?php echo h($r['bill_type'] ?? ''); ?>"
+  data-description="<?php echo h($r['description']); ?>"
+  data-amount="<?php echo h((float)$r['amount']); ?>"
+  data-discount="<?php echo h((float)$r['discount']); ?>">
+  ✏️
+</button>
+
+
+      <!-- Delete button -->
+      <form method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this bill?');">
+        <input type="hidden" name="action" value="delete_bill">
+        <input type="hidden" name="id" value="<?php echo (int)$r['id']; ?>">
+        <button type="submit" name="submit_delete"
+          class="grid h-10 w-10 place-items-center rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100">
+          🗑️
+        </button>
+      </form>
+    </div>
+  <?php else: ?>
+    <span class="text-sm font-semibold text-slate-400">—</span>
+  <?php endif; ?>
+</td>
+
                   </tr>
                 <?php endforeach; ?>
               <?php endif; ?>
@@ -735,6 +869,61 @@ include_once __DIR__ . "/../includes/header.php";
   </div>
 </div>
 
+<!-- Modal: Edit Bill (UNPAID only) -->
+<div id="editModal" class="fixed inset-0 z-50 hidden">
+  <div id="editOverlay" class="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"></div>
+
+  <div class="relative mx-auto flex min-h-full max-w-xl items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b px-6 py-4">
+        <div class="text-lg font-extrabold">Edit Bill</div>
+        <button type="button" id="closeEdit"
+          class="grid h-10 w-10 place-items-center rounded-2xl hover:bg-slate-50 text-slate-500">✕</button>
+      </div>
+
+      <form method="POST" class="p-6">
+        <input type="hidden" name="action" value="update_bill">
+        <input type="hidden" name="id" id="edit_id" value="">
+
+        <div class="grid gap-4">
+          <div>
+            <label class="text-xs font-extrabold tracking-widest text-slate-500">DESCRIPTION</label>
+            <input id="edit_description" name="description"
+              class="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none"
+              placeholder="Description">
+            <div class="mt-2 text-xs font-semibold text-slate-500" id="edit_note"></div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="text-xs font-extrabold tracking-widest text-slate-500">AMOUNT</label>
+              <input id="edit_amount" name="amount" type="number" step="0.01" min="0"
+                class="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none">
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold tracking-widest text-slate-500">DISCOUNT</label>
+              <input id="edit_discount" name="discount" type="number" step="0.01" min="0"
+                class="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-sm outline-none" value="0">
+              <div class="mt-2 text-xs font-semibold text-slate-500">Discount max is 20%.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button type="button" id="cancelEdit"
+            class="rounded-2xl border bg-white px-5 py-3 text-sm font-extrabold hover:bg-slate-50">Cancel</button>
+          <button type="submit"
+            class="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-extrabold text-white hover:bg-orange-600">
+            Save changes →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
 <script>
 (function(){
   const addBtn = document.getElementById("openAddBillModal");
@@ -747,6 +936,21 @@ include_once __DIR__ . "/../includes/header.php";
   const payO = document.getElementById("payOverlay");
   const closePay = document.getElementById("closePay");
   const cancelPay = document.getElementById("cancelPay");
+    const editM = document.getElementById("editModal");
+  const editO = document.getElementById("editOverlay");
+  const closeEdit = document.getElementById("closeEdit");
+  const cancelEdit = document.getElementById("cancelEdit");
+
+  editO?.addEventListener("click", ()=>closeM(editM));
+  closeEdit?.addEventListener("click", ()=>closeM(editM));
+  cancelEdit?.addEventListener("click", ()=>closeM(editM));
+
+  const editId = document.getElementById("edit_id");
+  const editDesc = document.getElementById("edit_description");
+  const editAmount = document.getElementById("edit_amount");
+  const editDiscount = document.getElementById("edit_discount");
+  const editNote = document.getElementById("edit_note");
+
 
   function openM(el){ el.classList.remove("hidden"); document.body.style.overflow="hidden"; }
   function closeM(el){ el.classList.add("hidden"); document.body.style.overflow=""; }
@@ -922,7 +1126,37 @@ include_once __DIR__ . "/../includes/header.php";
       if (!payM.classList.contains("hidden")) closeM(payM);
     }
   });
+    document.addEventListener('click', function(e){
+    const btn = e.target.closest && e.target.closest('.open-edit');
+    if (!btn) return;
+
+    const id = btn.getAttribute('data-id');
+    const desc = btn.getAttribute('data-description') || '';
+    const amount = btn.getAttribute('data-amount') || '0';
+    const discount = btn.getAttribute('data-discount') || '0';
+    const type = btn.getAttribute('data-type') || '';
+
+    editId.value = id;
+    editDesc.value = desc;
+    editAmount.value = Number(amount).toFixed(2);
+    editDiscount.value = Number(discount).toFixed(2);
+
+    // Lock amount for consultation & surgery (backend enforces too)
+    if (type === 'CONSULTATION') {
+      editAmount.readOnly = true;
+      editNote.textContent = "Consultation amount is fixed ($10).";
+    } else if (type === 'SURGERY') {
+      editAmount.readOnly = true;
+      editNote.textContent = "Surgery amount comes from surgery_items (cannot change).";
+    } else {
+      editAmount.readOnly = false;
+      editNote.textContent = "You can edit description, amount and discount (discount max 20%).";
+    }
+
+    openM(editM);
+  });
+
 })();
 </script>
 
-<?php include_once __DIR__ . "/../includes/footer.php"; ?>
+

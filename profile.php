@@ -279,7 +279,7 @@ $flash = flash_get();
 
 include_once __DIR__ . "/includes/header.php";
 ?>
-
+ <div class="min-h-screen bg-slate-50 md:pl-72">
 <div class="md:flex min-h-screen">
   <?php include __DIR__ . "/includes/sidebar.php"; ?>
 
@@ -634,4 +634,4 @@ include_once __DIR__ . "/includes/header.php";
   </div>
 </div>
 
-<?php include_once __DIR__ . "/includes/footer.php"; ?>
+

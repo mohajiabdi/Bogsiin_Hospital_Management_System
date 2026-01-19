@@ -15,13 +15,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $password = $_POST["password"] ?? "";
   $agree = isset($_POST["agree"]);
 
-  if ($full_name === "" || $email === "" || $password === "") {
+   if ($full_name === "" || $email === "" || $password === "") {
     $error = "Please fill all required fields.";
-  } elseif (!$agree) {
+  }
+  elseif (!preg_match('/^[A-Za-z ]+$/', $full_name)) {
+    $error = "Full name can only contain letters and spaces.";
+  }
+  elseif (strlen($full_name) < 3) {
+    $error = "Full name must be at least 3 characters long.";
+  }
+  elseif (!$agree) {
     $error = "You must agree to the Terms and Privacy Policy.";
-  } elseif (strlen($password) < 6) {
+  }
+  elseif (strlen($password) < 6) {
     $error = "Password must be at least 6 characters.";
-  } else {
+  }
+  else {
+
     // check email exists
     $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);

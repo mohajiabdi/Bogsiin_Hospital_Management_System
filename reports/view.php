@@ -93,7 +93,7 @@ $stmt = $pdo->prepare("
     a.appointment_datetime,
     a.status,
     p.full_name AS patient_name,
-    e.full_name AS employee_name
+    e.full_name AS Doctor
   FROM appointments a
   JOIN patients p ON p.id=a.patient_id
   JOIN employees e ON e.id=a.employee_id
@@ -168,7 +168,7 @@ if (isset($_GET["ajax"]) && $_GET["ajax"] === "statements") {
   $res = ["ok"=>true, "rows"=>[]];
   try {
     if ($type === 'paid_bills') {
-      $s = $pdo->prepare("SELECT b.id, b.receipt_no, b.description, b.amount, b.discount, b.total, b.payment_method, b.paid_at, p.full_name AS patient_name, e.full_name AS employee_name FROM bills b LEFT JOIN patients p ON p.id=b.patient_id LEFT JOIN employees e ON e.id=b.employee_id WHERE b.status='PAID' AND DATE(b.paid_at) BETWEEN :from AND :to ORDER BY b.paid_at DESC LIMIT 2000");
+      $s = $pdo->prepare("SELECT b.id, b.receipt_no, b.description, b.amount, b.discount, b.total, b.payment_method, b.paid_at, p.full_name AS patient_name, e.full_name AS Doctor FROM bills b LEFT JOIN patients p ON p.id=b.patient_id LEFT JOIN employees e ON e.id=b.employee_id WHERE b.status='PAID' AND DATE(b.paid_at) BETWEEN :from AND :to ORDER BY b.paid_at DESC LIMIT 2000");
       $s->execute([":from"=>$fromA, ":to"=>$toA]);
       $res["rows"] = $s->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } elseif ($type === 'appointments') {
@@ -416,7 +416,7 @@ include_once __DIR__ . "/../includes/header.php";
                       <div class="text-xs font-extrabold text-orange-600"><?= h($a["status"]); ?></div>
                     </div>
                     <div class="mt-1 text-xs font-semibold text-slate-500">
-                      <?= h(date("Y-m-d H:i", strtotime($a["appointment_datetime"]))); ?> • <?= h($a["employee_name"]); ?>
+                      <?= h(date("Y-m-d H:i", strtotime($a["appointment_datetime"]))); ?> • <?= h($a["Doctor"]); ?>
                     </div>
                   </div>
                 <?php endforeach; ?>

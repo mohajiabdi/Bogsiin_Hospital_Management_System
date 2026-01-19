@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 18, 2026 at 03:48 AM
+-- Generation Time: Jan 19, 2026 at 10:44 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -33,7 +33,7 @@ CREATE TABLE `appointments` (
   `employee_id` int(11) NOT NULL,
   `appointment_datetime` datetime NOT NULL,
   `reason` varchar(255) DEFAULT NULL,
-  `status` enum('PENDING','CONFIRMED','COMPLETED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+  `status` enum('PENDING','CONFIRMED','COMPLETED','CANCELLED','NO_SHOW') NOT NULL DEFAULT 'PENDING',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -44,8 +44,11 @@ CREATE TABLE `appointments` (
 INSERT INTO `appointments` (`id`, `patient_id`, `employee_id`, `appointment_datetime`, `reason`, `status`, `created_at`) VALUES
 (1, 1, 21, '2026-01-13 15:36:00', NULL, 'CANCELLED', '2026-01-14 12:37:12'),
 (2, 2, 2, '2026-01-14 19:00:00', NULL, 'COMPLETED', '2026-01-14 12:39:03'),
-(3, 9, 3, '2026-01-19 09:00:00', NULL, 'CONFIRMED', '2026-01-18 00:47:30'),
-(4, 35, 3, '2026-01-20 08:00:00', NULL, 'COMPLETED', '2026-01-18 00:48:13');
+(3, 9, 3, '2026-01-19 09:00:00', NULL, 'COMPLETED', '2026-01-18 00:47:30'),
+(4, 35, 3, '2026-01-20 08:00:00', NULL, 'CONFIRMED', '2026-01-18 00:48:13'),
+(5, 22, 10, '2026-01-19 08:00:00', NULL, 'COMPLETED', '2026-01-18 12:58:35'),
+(6, 22, 10, '2026-01-19 09:00:00', NULL, 'CONFIRMED', '2026-01-18 13:00:14'),
+(7, 32, 26, '2026-01-20 10:15:00', NULL, 'PENDING', '2026-01-19 19:38:14');
 
 -- --------------------------------------------------------
 
@@ -81,7 +84,14 @@ INSERT INTO `bills` (`id`, `appointment_id`, `patient_id`, `employee_id`, `presc
 (6, NULL, 1, NULL, NULL, 'SURGERY', 'Surgery: Cesarean Section (C-Section)', 450.00, 0.00, 450.00, 'PAID', 'CASH', 'RCPT-20260117-DA1C26', '2026-01-18 01:43:20', '2026-01-17 22:37:34'),
 (7, NULL, 3, 3, 3, 'PRESCRIPTION', 'Prescription #3', 0.75, 0.00, 0.75, 'PAID', 'CASH', 'RCPT-20260117-368355', '2026-01-18 01:51:33', '2026-01-17 22:51:12'),
 (8, NULL, 16, 3, NULL, 'SURGERY', 'Bowel Resection (Small/Large) • $1,800.00', 1800.00, 200.00, 1600.00, 'PAID', 'CARD', 'RCPT-20260118-4AB2E2', '2026-01-18 02:29:10', '2026-01-17 23:29:00'),
-(9, NULL, 52, 5, NULL, 'SURGERY', 'Hernia Repair (Inguinal) - Laparoscopic • $950.00', 950.00, 100.00, 850.00, 'UNPAID', NULL, NULL, NULL, '2026-01-17 23:33:12');
+(10, NULL, 17, 32, NULL, 'SURGERY', 'ORIF (Fracture Fixation) - Large Bone • $2,200.00', 2200.00, 200.00, 2000.00, 'PAID', 'CARD', 'RCPT-20260118-6DE89A', '2026-01-18 15:53:59', '2026-01-18 12:53:48'),
+(11, NULL, 22, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260118-4050CD', '2026-01-18 16:01:41', '2026-01-18 13:01:35'),
+(12, NULL, 56, 99, NULL, 'SURGERY', 'ORIF (Fracture Fixation) - Large Bone • $2,200.00', 2200.00, 200.00, 2000.00, 'PAID', 'CARD', 'RCPT-20260119-7BD9E9', '2026-01-19 12:45:57', '2026-01-19 09:45:45'),
+(13, NULL, 2, 3, 4, 'PRESCRIPTION', 'Prescription #4', 2.50, 0.00, 2.50, 'PAID', 'CASH', 'RCPT-20260119-8233F2', '2026-01-19 12:50:08', '2026-01-19 09:49:58'),
+(14, NULL, 64, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 10.00, 0.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-7770EB', '2026-01-20 00:10:22', '2026-01-19 20:58:01'),
+(15, NULL, 12, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 2.00, 8.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-BF5582', '2026-01-20 00:10:10', '2026-01-19 21:06:24'),
+(16, NULL, 50, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-F25773', '2026-01-20 00:30:24', '2026-01-19 21:29:59'),
+(17, NULL, 63, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-238334', '2026-01-20 00:30:18', '2026-01-19 21:30:12');
 
 -- --------------------------------------------------------
 
@@ -206,7 +216,9 @@ INSERT INTO `employees` (`id`, `user_id`, `emp_code`, `full_name`, `gender`, `ph
 (95, NULL, NULL, 'Hassan Abdi Noor', 'Male', '0613800077', 'hassan.reception@hospital.so', 'RECEPTIONIST', 'Front Desk', 'Patient Registration', '2020-10-30', 'ACTIVE', '2026-01-17 23:31:16'),
 (96, NULL, NULL, 'Nimo Yusuf Jama', 'Female', '0613800078', 'nimo.reception@hospital.so', 'RECEPTIONIST', 'Front Desk', 'Customer Service', '2018-04-17', 'ACTIVE', '2026-01-17 23:31:16'),
 (97, NULL, NULL, 'Ahmed Mohamed Farah', 'Male', '0613800079', 'ahmed.reception@hospital.so', 'RECEPTIONIST', 'Front Desk', 'Billing Support', '2021-06-05', 'ACTIVE', '2026-01-17 23:31:16'),
-(98, NULL, NULL, 'Fadumo Hassan Ali', 'Female', '0613800080', 'fadumo.reception@hospital.so', 'RECEPTIONIST', 'Front Desk', 'Patient Records', '2017-08-29', 'ACTIVE', '2026-01-17 23:31:16');
+(98, NULL, NULL, 'Fadumo Hassan Ali', 'Female', '0613800080', 'fadumo.reception@hospital.so', 'RECEPTIONIST', 'Front Desk', 'Patient Records', '2017-08-29', 'ACTIVE', '2026-01-17 23:31:16'),
+(99, NULL, NULL, 'Abdullahi Bashiir', 'Male', '617008899', NULL, 'DOCTOR', NULL, NULL, NULL, 'ACTIVE', '2026-01-19 09:42:56'),
+(101, NULL, NULL, 'Hassan Jamac', 'Male', '0618995511', NULL, 'ADMINISTRATOR', NULL, NULL, NULL, 'ACTIVE', '2026-01-19 18:58:35');
 
 -- --------------------------------------------------------
 
@@ -294,7 +306,8 @@ INSERT INTO `patients` (`id`, `patient_code`, `full_name`, `gender`, `date_of_bi
 (60, NULL, 'Shukri Abdirahman Jama', 'Female', '1994-12-19', '0612345057', 'Garowe', NULL, NULL, '2026-01-17 23:19:47'),
 (61, NULL, 'Nasra Ahmed Farah', 'Female', '1997-03-02', '0612345058', 'Galkayo', NULL, NULL, '2026-01-17 23:19:47'),
 (62, NULL, 'Ayaan Mohamed Yusuf', 'Female', '2000-05-14', '0612345059', 'Mogadishu', NULL, NULL, '2026-01-17 23:19:47'),
-(63, NULL, 'Saida Hassan Ali', 'Female', '1992-08-26', '0612345060', 'Hodan', NULL, NULL, '2026-01-17 23:19:47');
+(63, NULL, 'Saida Hassan Ali', 'Female', '1992-08-26', '0612345060', 'Hodan', NULL, NULL, '2026-01-17 23:19:47'),
+(64, NULL, 'Nabiila Abdi  Farah', 'Female', '2026-01-19', NULL, NULL, NULL, NULL, '2026-01-19 20:32:05');
 
 -- --------------------------------------------------------
 
@@ -818,10 +831,15 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`, `is_active`, `created_at`) VALUES
 (1, 'Mohamed Mahad Abdi', 'maher.mahad@gmail.com', '$2y$10$2jfjCLitqIkYa7A9f7vqyucR9X0fKGwTZZ0/ymThAPNkQf.8cuDwO', 'ADMIN', 1, '2026-01-12 16:43:45'),
-(2, 'Bashiir Muumin', 'bashiir@gmail.com', '$2y$10$mouGA/Q9/gwj/iOjsvXMRu1EdP2IUENrksHFrd.Ih8LjN3hjSJA9u', 'STAFF', 1, '2026-01-14 11:45:21'),
+(2, 'Bashiir Muumin', 'bashiir@gmail.com', '$2y$10$mouGA/Q9/gwj/iOjsvXMRu1EdP2IUENrksHFrd.Ih8LjN3hjSJA9u', 'RECEPTIONIST', 1, '2026-01-14 11:45:21'),
 (3, 'Mo Haji Abdi', 'mo.haji.abdi1@gmail.com', '$2y$10$wLtwv1eyky84EdnpLqYaX.r5zS3KWaPPstQoSzzfeN4XNeqcscGzW', 'STAFF', 1, '2026-01-14 13:10:54'),
 (4, 'Adan Mahad', 'adanjama@gmail.com', '$2y$10$VB.IkNvpVNMDH8h69K6afOq.QtrEpL02KRS4uqXqdpZ0O.o4jMIua', 'STAFF', 1, '2026-01-18 02:34:14'),
-(5, 'Asho Abdulkadir', 'asho@gmail.com', '$2y$10$x5HHQPAyhdt53yu0/TDYjej9axd6NpXobq8.6T9mgDEsTg2d85p1a', 'STAFF', 1, '2026-01-18 02:42:08');
+(5, 'Asho Abdulkadir', 'asho@gmail.com', '$2y$10$x5HHQPAyhdt53yu0/TDYjej9axd6NpXobq8.6T9mgDEsTg2d85p1a', 'STAFF', 1, '2026-01-18 02:42:08'),
+(6, 'Komaando', 'komaando@gmail.com', '$2y$10$MwlwPkOvDwHpDbo32F9JbuZRp5h5xCEkmX/GOg0wvrhbXvER4qgeW', 'STAFF', 1, '2026-01-19 09:39:13'),
+(7, 'Maher yare', 'maher@gmail.com', '$2y$10$fFUlktyq5/09NMTJsXtpqeyFi8x/1Xv.0BG12WhEyvIrom34/ise2', 'STAFF', 1, '2026-01-19 18:20:28'),
+(8, 'Mahad Haji', 'mahad@gmail.com', '$2y$10$/GFq3gBHujLRpO9PKGiwBe30lXdfFqmkZPg8fn.3FzFUXJVSj0BJO', 'STAFF', 1, '2026-01-19 18:20:43'),
+(9, 'Mahad Haji Abdi', 'mahadd@gmail.com', '$2y$10$iIGNvhIRKg4b1eYPFwyFlOQ.EZBoBP7zvux.iuV03ofYVfFtAw8ku', 'STAFF', 1, '2026-01-19 18:21:36'),
+(10, 'Hello', 'hello@gmail.com', '$2y$10$z1fO0vtAWRgcrDeJe/YemuKIBpnT5EfvlPhT4S8osccrbOBzuaFjO', 'ADMIN', 1, '2026-01-19 18:40:16');
 
 --
 -- Indexes for dumped tables
@@ -918,7 +936,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `bills`
@@ -930,13 +948,13 @@ ALTER TABLE `bills`
 -- AUTO_INCREMENT for table `employees`
 --
 ALTER TABLE `employees`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=99;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
 
 --
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT for table `pharmacy_items`
@@ -966,7 +984,7 @@ ALTER TABLE `surgery_items`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables

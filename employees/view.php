@@ -34,6 +34,68 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $hire_date = trim($_POST["hire_date"] ?? "");
     $status = trim($_POST["status"] ?? "ACTIVE");
     $emp_code = trim($_POST["emp_code"] ?? "");
+// ---------- validation ----------
+if ($full_name === "" || $job_title === "") {
+  flash_set("error", "Full name and job title are required.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+// Full name rules
+if (!preg_match('/^[A-Za-z\s\.]+$/', $full_name)) {
+  flash_set("error", "Full name can only contain letters, spaces, and dots.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+if (mb_strlen($full_name) < 3) {
+  flash_set("error", "Full name must be at least 3 characters long.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+// Job title check
+$allowedJobs = ["DOCTOR","NURSE","ADMINISTRATOR","LAB","PHARMACIST","RECEPTIONIST"];
+if (!in_array($job_title, $allowedJobs, true)) {
+  flash_set("error", "Invalid job title selected.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+// Email validation
+if ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+  flash_set("error", "Invalid email address.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+// Gender validation
+if ($gender !== "" && !in_array($gender, ["Male","Female"], true)) {
+  flash_set("error", "Invalid gender value.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+// Status validation
+if ($status !== "" && !in_array($status, ["ACTIVE","INACTIVE"], true)) {
+  flash_set("error", "Invalid status value.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
+
+// ---------- Phone validation ----------
+function valid_phone($phone) {
+  $phone = trim($phone);
+  if ($phone === "") return true; // optional field
+  // allows +, digits, spaces, hyphens (Somalia-safe)
+  return (bool)preg_match('/^\+?[0-9][0-9\s\-]{6,20}$/', $phone);
+}
+
+if (!valid_phone($phone)) {
+  flash_set("error", "Invalid phone number format. Use digits, spaces, hyphens, optional leading +.");
+  header("Location: /hospital/employees/view.php");
+  exit;
+}
 
     if ($full_name === "" || $job_title === "") {
       flash_set("error", "Full name and job title are required.");

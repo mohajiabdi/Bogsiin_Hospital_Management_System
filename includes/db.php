@@ -20,3 +20,8 @@ try {
 } catch (PDOException $e) {
   die("Database connection failed: " . $e->getMessage());
 }
+
+
+  // "dev": "tailwindcss@3.4.17 -i assets/input.css -o assets/style.css --watch",
+  //   "build": "tailwindcss@3.4.17 -i assets/input.css -o assets/style.css --minify"
+  // },

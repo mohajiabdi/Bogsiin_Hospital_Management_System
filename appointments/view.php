@@ -28,9 +28,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $appointment_datetime = trim($_POST["appointment_datetime"] ?? "");
     $reason = trim($_POST["reason"] ?? "");
     $status = trim($_POST["status"] ?? "PENDING");
+    $allowedStatus = ["PENDING","CONFIRMED","COMPLETED","CANCELLED","NO_SHOW"];
+if (!in_array($status, $allowedStatus, true)) $status = "PENDING";
 
-    $allowedStatus = ["PENDING","CONFIRMED","COMPLETED","CANCELLED"];
-    if (!in_array($status, $allowedStatus, true)) $status = "PENDING";
+// --- Prevent marking as COMPLETED before appointment time ---
+if ($status === "COMPLETED") {
+    $apptTime = DateTime::createFromFormat('Y-m-d H:i:s', $appointment_datetime);
+    if (!$apptTime) { 
+        $apptTime = new DateTime($appointment_datetime); // fallback
+    }
+    $now = new DateTime();
+    if ($apptTime > $now) {
+        flash_set("error", "You cannot mark this appointment as completed before its scheduled time.");
+        header("Location: /hospital/appointments/view.php"); exit;
+    }
+}
+
 
     if ($patient_id <= 0 || $employee_id <= 0 || $appointment_datetime === "") {
       flash_set("error", "Patient, employee and appointment date/time are required.");
@@ -38,7 +51,54 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Normalize datetime (HTML datetime-local => "YYYY-MM-DDTHH:MM")
-    $appointment_datetime = str_replace("T", " ", $appointment_datetime);
+  $appointment_datetime = str_replace("T", " ", $appointment_datetime);
+  $apptDT = DateTime::createFromFormat('Y-m-d H:i', str_replace("T", " ", $appointment_datetime));
+$now = new DateTime();
+
+if (!$apptDT) {
+    flash_set("error", "Invalid appointment date/time format.");
+    header("Location: /hospital/appointments/view.php"); exit;
+}
+
+// --- Only block setting a new date in the past ---
+if ($apptDT < $now) {
+    if ($id === "") {
+        // Creating a new appointment in the past → block
+        flash_set("error", "Appointment date/time cannot be in the past.");
+        header("Location: /hospital/appointments/view.php"); exit;
+    } else {
+        // Editing an existing appointment
+        $stmtOld = $pdo->prepare("SELECT appointment_datetime FROM appointments WHERE id=? LIMIT 1");
+        $stmtOld->execute([(int)$id]);
+        $old = $stmtOld->fetch(PDO::FETCH_ASSOC);
+        if (!$old) {
+            flash_set("error", "Appointment not found.");
+            header("Location: /hospital/appointments/view.php"); exit;
+        }
+        $oldDT = new DateTime($old['appointment_datetime']);
+        if ($apptDT != $oldDT) {
+            // Trying to change datetime to past → block
+            flash_set("error", "Cannot change appointment to a past date/time.");
+            header("Location: /hospital/appointments/view.php"); exit;
+        }
+        // Otherwise, user is editing past appointment without changing datetime → allow
+    }
+}
+
+
+
+    try {
+    // Automatically mark overdue appointments as NO_SHOW
+    $pdo->exec("
+        UPDATE appointments
+        SET status = 'NO_SHOW'
+        WHERE status IN ('PENDING','CONFIRMED')
+          AND appointment_datetime <= NOW() - INTERVAL 24 HOUR
+    ");
+} catch (Throwable $e) {
+    error_log("Failed to update NO_SHOW appointments: " . $e->getMessage());
+}
+
 
     try {
       if ($id === "") {
@@ -137,6 +197,38 @@ $st = trim($_GET["st"] ?? "");
 $from = trim($_GET["from"] ?? "");
 $to = trim($_GET["to"] ?? "");
 $sort = trim($_GET["sort"] ?? "");
+$dayFilter = trim($_GET["day"] ?? ""); // New dropdown for today/yesterday/etc
+
+// ---------- Default date range (last 30 days) ----------
+if ($from === "" && $to === "") {
+    $end = new DateTime(); // today
+    $start = (clone $end)->modify('-30 days'); // 30 days ago
+
+    $from = $start->format('Y-m-d');
+    $to = ""; // no upper limit
+}
+
+// ---------- Apply day filter ----------
+if ($dayFilter !== "") {
+    $today = new DateTime();
+    switch ($dayFilter) {
+        case 'yesterday':
+            $from = $to = $today->modify('-1 day')->format('Y-m-d');
+            break;
+        case 'today':
+            $from = $to = $today->format('Y-m-d');
+            break;
+        case 'tomorrow':
+            $from = $to = $today->modify('+1 day')->format('Y-m-d');
+            break;
+        case 'day_before_yesterday':
+            $from = $to = $today->modify('-2 day')->format('Y-m-d');
+            break;
+        case 'day_after_tomorrow':
+            $from = $to = $today->modify('+2 day')->format('Y-m-d');
+            break;
+    }
+}
 
 // ---------- AJAX: search appointments (return patients and doctors separately) ----------
 if (isset($_GET["ajax"]) && $_GET["ajax"] === "search_appointments") {
@@ -412,7 +504,7 @@ include_once __DIR__ . "/../includes/header.php";
             </div>
           </div>
 
-            <div class="lg:col-span-1">
+            <div class="lg:col-span-2">
               <select name="sort" class="w-full rounded-2xl border bg-white px-4 py-3 text-sm font-semibold outline-none">
                 <option value="">Sort</option>
                 <option value="date_desc" <?php echo $sort==='date_desc' || $sort===''?"selected":""; ?>>Date ↓</option>
@@ -423,6 +515,16 @@ include_once __DIR__ . "/../includes/header.php";
                 <option value="employee_za" <?php echo $sort==='employee_za'?"selected":""; ?>>Employee Z–A</option>
               </select>
             </div>
+<div class="lg:col-span-2">
+  <select name="day" class="w-full rounded-2xl border bg-white px-4 py-3 text-sm font-semibold outline-none">
+    <option value="">Quick Day</option>
+    <option value="day_before_yesterday" <?php echo $dayFilter==='day_before_yesterday'?"selected":""; ?>>Day Before Yesterday</option>
+    <option value="yesterday" <?php echo $dayFilter==='yesterday'?"selected":""; ?>>Yesterday</option>
+    <option value="today" <?php echo $dayFilter==='today'?"selected":""; ?>>Today</option>
+    <option value="tomorrow" <?php echo $dayFilter==='tomorrow'?"selected":""; ?>>Tomorrow</option>
+    <option value="day_after_tomorrow" <?php echo $dayFilter==='day_after_tomorrow'?"selected":""; ?>>Day After Tomorrow</option>
+  </select>
+</div>
 
           <div class="lg:col-span-2">
             <select name="st" class="w-full rounded-2xl border bg-white px-4 py-3 text-sm font-semibold outline-none">
@@ -491,6 +593,7 @@ include_once __DIR__ . "/../includes/header.php";
                       "CONFIRMED" => "bg-sky-100 text-sky-700",
                       "COMPLETED" => "bg-emerald-100 text-emerald-700",
                       "CANCELLED" => "bg-rose-100 text-rose-700",
+                      "NO_SHOW" => "bg-red-100 text-red-700",
                       default => "bg-slate-100 text-slate-700"
                     };
 
@@ -778,6 +881,21 @@ include_once __DIR__ . "/../includes/header.php";
       bodyList.appendChild(ul);
     } catch(e){ bodyList.textContent = 'Error loading schedule.'; }
   }
+ 
+  const statusSelect = document.getElementById("a_status");
+  const dtInput = document.getElementById("a_datetime");
+
+  function updateStatusOptions(){
+    const dtVal = dtInput.value;
+    if (!dtVal) return;
+    const apptTime = new Date(dtVal);
+    const now = new Date();
+    const completedOption = [...statusSelect.options].find(o => o.value === 'COMPLETED');
+    if (completedOption) completedOption.disabled = (apptTime > now);
+  }
+
+  dtInput.addEventListener('change', updateStatusOptions);
+  statusSelect.addEventListener('focus', updateStatusOptions);
 
   // open schedule modal when called
   window.openDoctorSchedule = function(){
@@ -791,4 +909,3 @@ include_once __DIR__ . "/../includes/header.php";
 })();
 </script>
 
-<?php include_once __DIR__ . "/../includes/footer.php"; ?>

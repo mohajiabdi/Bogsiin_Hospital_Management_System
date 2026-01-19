@@ -15,7 +15,9 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 </style> -->
 
   <!-- Tailwind output -->
-  <link rel="stylesheet" href="/hospital/assets/css/style.css" />
+  <!-- <link rel="stylesheet" href="/hospital/assets/css/style.css" /> -->
+   <script src="https://cdn.tailwindcss.com"></script>
+
 
   <!-- Optional: Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
