@@ -60,30 +60,35 @@ if (!$apptDT) {
     header("Location: /hospital/appointments/view.php"); exit;
 }
 
-// --- Only block setting a new date in the past ---
-if ($apptDT < $now) {
-    if ($id === "") {
-        // Creating a new appointment in the past → block
-        flash_set("error", "Appointment date/time cannot be in the past.");
-        header("Location: /hospital/appointments/view.php"); exit;
-    } else {
-        // Editing an existing appointment
-        $stmtOld = $pdo->prepare("SELECT appointment_datetime FROM appointments WHERE id=? LIMIT 1");
-        $stmtOld->execute([(int)$id]);
-        $old = $stmtOld->fetch(PDO::FETCH_ASSOC);
-        if (!$old) {
-            flash_set("error", "Appointment not found.");
-            header("Location: /hospital/appointments/view.php"); exit;
-        }
-        $oldDT = new DateTime($old['appointment_datetime']);
-        if ($apptDT != $oldDT) {
-            // Trying to change datetime to past → block
-            flash_set("error", "Cannot change appointment to a past date/time.");
-            header("Location: /hospital/appointments/view.php"); exit;
-        }
-        // Otherwise, user is editing past appointment without changing datetime → allow
-    }
+// --- Only block setting a new date in the past ---// --- Normalize datetime-local and validate (minute-accurate) ---
+date_default_timezone_set('Africa/Mogadishu'); // or set this once in config/bootstrap
+
+$appointment_datetime = trim($_POST["appointment_datetime"] ?? "");
+$appointment_datetime = str_replace("T", " ", $appointment_datetime); // "YYYY-MM-DD HH:MM"
+
+// Parse in same timezone
+$tz = new DateTimeZone('Africa/Mogadishu');
+$apptDT = DateTime::createFromFormat('Y-m-d H:i', $appointment_datetime, $tz);
+if (!$apptDT) {
+  flash_set("error", "Invalid appointment date/time format.");
+  header("Location: /hospital/appointments/view.php"); exit;
 }
+
+// Round both to minute (remove seconds)
+$apptDT->setTime((int)$apptDT->format('H'), (int)$apptDT->format('i'), 0);
+
+$now = new DateTime('now', $tz);
+$now->setTime((int)$now->format('H'), (int)$now->format('i'), 0);
+
+// ✅ Require strictly future time (at least next minute)
+// If you want allow "right now", change <= to <
+if ($id === "" && $apptDT <= $now) {
+  flash_set("error", "Appointment date/time must be after now.");
+  header("Location: /hospital/appointments/view.php"); exit;
+}
+
+// Store with seconds for DB consistency
+$appointment_datetime_db = $apptDT->format('Y-m-d H:i:00');
 
 
 

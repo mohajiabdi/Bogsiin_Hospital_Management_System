@@ -666,8 +666,9 @@ include_once __DIR__ . "/../includes/header.php";
   <?php if (!$isPaid): ?>
     <div class="flex justify-end gap-2">
       <!-- Edit button -->
-      <button type="button"
-  class="grid h-10 w-10 place-items-center rounded-2xl border bg-white hover:bg-slate-50"
+     <button type="button"
+  class="open-edit grid h-10 w-10 place-items-center rounded-2xl border bg-white hover:bg-slate-50 cursor-pointer"
+  title="Edit bill"
   data-id="<?php echo (int)$r['id']; ?>"
   data-type="<?php echo h($r['bill_type'] ?? ''); ?>"
   data-description="<?php echo h($r['description']); ?>"
@@ -675,6 +676,7 @@ include_once __DIR__ . "/../includes/header.php";
   data-discount="<?php echo h((float)$r['discount']); ?>">
   ✏️
 </button>
+
 
 
       <!-- Delete button -->

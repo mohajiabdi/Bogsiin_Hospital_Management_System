@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 19, 2026 at 10:44 PM
+-- Generation Time: Jan 20, 2026 at 10:06 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -47,8 +47,12 @@ INSERT INTO `appointments` (`id`, `patient_id`, `employee_id`, `appointment_date
 (3, 9, 3, '2026-01-19 09:00:00', NULL, 'COMPLETED', '2026-01-18 00:47:30'),
 (4, 35, 3, '2026-01-20 08:00:00', NULL, 'CONFIRMED', '2026-01-18 00:48:13'),
 (5, 22, 10, '2026-01-19 08:00:00', NULL, 'COMPLETED', '2026-01-18 12:58:35'),
-(6, 22, 10, '2026-01-19 09:00:00', NULL, 'CONFIRMED', '2026-01-18 13:00:14'),
-(7, 32, 26, '2026-01-20 10:15:00', NULL, 'PENDING', '2026-01-19 19:38:14');
+(6, 22, 10, '2026-01-19 09:00:00', NULL, 'NO_SHOW', '2026-01-18 13:00:14'),
+(7, 32, 26, '2026-01-30 10:15:00', NULL, 'CONFIRMED', '2026-01-19 19:38:14'),
+(8, 38, 20, '2026-01-21 12:48:00', NULL, 'PENDING', '2026-01-20 09:48:24'),
+(9, 46, 14, '2026-01-20 16:50:00', NULL, 'PENDING', '2026-01-20 10:50:40'),
+(10, 9, 23, '2026-01-21 13:54:00', NULL, 'CONFIRMED', '2026-01-20 10:54:41'),
+(11, 64, 27, '2026-01-20 18:09:00', NULL, 'PENDING', '2026-01-20 11:09:56');
 
 -- --------------------------------------------------------
 
@@ -91,7 +95,13 @@ INSERT INTO `bills` (`id`, `appointment_id`, `patient_id`, `employee_id`, `presc
 (14, NULL, 64, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 10.00, 0.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-7770EB', '2026-01-20 00:10:22', '2026-01-19 20:58:01'),
 (15, NULL, 12, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 2.00, 8.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-BF5582', '2026-01-20 00:10:10', '2026-01-19 21:06:24'),
 (16, NULL, 50, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-F25773', '2026-01-20 00:30:24', '2026-01-19 21:29:59'),
-(17, NULL, 63, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-238334', '2026-01-20 00:30:18', '2026-01-19 21:30:12');
+(17, NULL, 63, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260119-238334', '2026-01-20 00:30:18', '2026-01-19 21:30:12'),
+(18, NULL, 9, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'CARD', 'RCPT-20260119-352DE0', '2026-01-20 00:51:19', '2026-01-19 21:47:46'),
+(20, NULL, 38, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 2.00, 8.00, 'PAID', 'EVCPLUS', 'RCPT-20260120-D01B53', '2026-01-20 12:50:33', '2026-01-20 09:50:02'),
+(21, NULL, 38, 14, NULL, 'SURGERY', 'Cervical Biopsy Procedure • $120.00', 120.00, 24.00, 96.00, 'PAID', 'CARD', 'RCPT-20260120-53A79B', '2026-01-20 12:53:13', '2026-01-20 09:52:56'),
+(22, NULL, 38, 28, 5, 'PRESCRIPTION', 'Prescription #5', 19.05, 0.00, 19.05, 'PAID', 'EVCPLUS', 'RCPT-20260120-BC1EF3', '2026-01-20 12:55:05', '2026-01-20 09:54:54'),
+(25, NULL, 64, NULL, NULL, 'CONSULTATION', 'Consultation fee', 10.00, 0.00, 10.00, 'PAID', 'EVCPLUS', 'RCPT-20260120-30D1EF', '2026-01-20 14:12:33', '2026-01-20 11:12:18'),
+(26, NULL, 64, 4, 6, 'PRESCRIPTION', 'Prescription #6', 16.10, 0.00, 16.10, 'PAID', 'EVCPLUS', 'RCPT-20260120-1BEAF7', '2026-01-20 14:14:00', '2026-01-20 11:13:49');
 
 -- --------------------------------------------------------
 
@@ -650,7 +660,9 @@ INSERT INTO `prescriptions` (`id`, `patient_id`, `prescribed_by_employee_id`, `n
 (1, 2, 3, '3 Times', '2026-01-17 20:11:11'),
 (2, 1, 3, NULL, '2026-01-17 20:18:03'),
 (3, 3, 3, NULL, '2026-01-17 20:31:03'),
-(4, 2, 3, NULL, '2026-01-17 23:02:37');
+(4, 2, 3, NULL, '2026-01-17 23:02:37'),
+(5, 38, 28, NULL, '2026-01-20 09:54:47'),
+(6, 64, 4, NULL, '2026-01-20 11:13:42');
 
 -- --------------------------------------------------------
 
@@ -677,7 +689,11 @@ INSERT INTO `prescription_items` (`id`, `prescription_id`, `pharmacy_item_id`, `
 (8, 4, 44, 5, NULL),
 (9, 4, 190, 10, NULL),
 (12, 2, 82, 4, NULL),
-(13, 2, 255, 15, NULL);
+(13, 2, 255, 15, NULL),
+(14, 5, 172, 10, NULL),
+(15, 5, 186, 5, NULL),
+(16, 6, 271, 6, NULL),
+(17, 6, 59, 5, NULL);
 
 -- --------------------------------------------------------
 
@@ -839,7 +855,8 @@ INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`, `is_ac
 (7, 'Maher yare', 'maher@gmail.com', '$2y$10$fFUlktyq5/09NMTJsXtpqeyFi8x/1Xv.0BG12WhEyvIrom34/ise2', 'STAFF', 1, '2026-01-19 18:20:28'),
 (8, 'Mahad Haji', 'mahad@gmail.com', '$2y$10$/GFq3gBHujLRpO9PKGiwBe30lXdfFqmkZPg8fn.3FzFUXJVSj0BJO', 'STAFF', 1, '2026-01-19 18:20:43'),
 (9, 'Mahad Haji Abdi', 'mahadd@gmail.com', '$2y$10$iIGNvhIRKg4b1eYPFwyFlOQ.EZBoBP7zvux.iuV03ofYVfFtAw8ku', 'STAFF', 1, '2026-01-19 18:21:36'),
-(10, 'Hello', 'hello@gmail.com', '$2y$10$z1fO0vtAWRgcrDeJe/YemuKIBpnT5EfvlPhT4S8osccrbOBzuaFjO', 'ADMIN', 1, '2026-01-19 18:40:16');
+(10, 'Hello', 'hello@gmail.com', '$2y$10$z1fO0vtAWRgcrDeJe/YemuKIBpnT5EfvlPhT4S8osccrbOBzuaFjO', 'ADMIN', 1, '2026-01-19 18:40:16'),
+(11, 'Najmo', 'najmo@gmail.com', '$2y$10$ACSlw./6tljfE7Zn.fAH1eUgyLaNjcETBFl4cAwRdbFT1MMWQ2sXm', 'STAFF', 0, '2026-01-20 09:58:47');
 
 --
 -- Indexes for dumped tables
@@ -936,7 +953,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `bills`
@@ -966,13 +983,13 @@ ALTER TABLE `pharmacy_items`
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `prescription_items`
 --
 ALTER TABLE `prescription_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `surgery_items`
@@ -984,7 +1001,7 @@ ALTER TABLE `surgery_items`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- Constraints for dumped tables
